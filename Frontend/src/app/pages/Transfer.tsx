@@ -3,10 +3,10 @@ import { useAuth } from "../lib/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
-import { Badge } from "../components/ui/Badge";
 import { ArrowLeftRight, CheckCircle2, AlertCircle, Wallet } from "lucide-react";
 import { formatCurrency } from "../lib/utils";
 import { toast } from "sonner";
+import { useNavigate } from "react-router";
 
 interface SavedAccount {
   id: string;
@@ -16,6 +16,7 @@ interface SavedAccount {
 }
 
 export function Transfer() {
+  const navigate = useNavigate();
   const { user, updateBalance } = useAuth();
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<SavedAccount | null>(null);
@@ -25,9 +26,46 @@ export function Transfer() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const accounts = JSON.parse(localStorage.getItem("nexus_saved_accounts") || "[]");
-    setSavedAccounts(accounts);
-  }, []);
+
+  const cargarCuentas = async () => {
+
+    try {
+
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        "http://localhost:3000/api/cuentas-destino",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      const cuentas = data.map((cuenta: any) => ({
+        id: cuenta._id,
+        alias: cuenta.alias,
+        accountNumber: cuenta.numeroCuenta,
+        bankName: cuenta.banco
+      }));
+
+      setSavedAccounts(cuentas);
+
+    } catch (error) {
+
+      console.error(error);
+
+      toast.error("Error al cargar cuentas");
+
+    }
+
+  };
+
+  cargarCuentas();
+
+}, []);
 
   const handleSelectAccount = (account: SavedAccount) => {
     setSelectedAccount(account);
@@ -60,36 +98,34 @@ export function Transfer() {
   };
 
   const handleConfirm = async () => {
-    setLoading(true);
+  setLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+  try {
+    const token = localStorage.getItem("token");
+
+    const response = await fetch("http://localhost:3000/api/transferencias", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        cuentaDestino: selectedAccount?.accountNumber,
+        monto: parseFloat(amount),
+        mensaje: concept
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      toast.error(data.mensaje || "Error al realizar transferencia");
+      setLoading(false);
+      return;
+    }
 
     const transferAmount = parseFloat(amount);
     const newBalance = (user?.balance || 0) - transferAmount;
-
-    const transaction = {
-      id: Date.now().toString(),
-      fromAccount: user?.accountNumber,
-      toAccount: selectedAccount?.accountNumber,
-      amount: transferAmount,
-      concept,
-      timestamp: new Date().toISOString(),
-      status: "completed",
-    };
-
-    const transactions = JSON.parse(localStorage.getItem("nexus_transactions") || "[]");
-    transactions.unshift(transaction);
-    localStorage.setItem("nexus_transactions", JSON.stringify(transactions));
-
-    const auditLog = JSON.parse(localStorage.getItem("nexus_audit") || "[]");
-    auditLog.unshift({
-      id: Date.now().toString(),
-      type: "transfer",
-      description: `Transferencia de ${formatCurrency(transferAmount)} a ${selectedAccount?.alias}`,
-      timestamp: new Date().toISOString(),
-      status: "success",
-    });
-    localStorage.setItem("nexus_audit", JSON.stringify(auditLog));
 
     updateBalance(newBalance);
 
@@ -99,8 +135,13 @@ export function Transfer() {
     setConcept("");
     setSelectedAccount(null);
     setShowConfirmation(false);
+  } catch (error) {
+    console.error(error);
+    toast.error("Error de conexión con el servidor");
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
   const transferAmount = parseFloat(amount) || 0;
   const newBalance = (user?.balance || 0) - transferAmount;
@@ -128,7 +169,7 @@ export function Transfer() {
                   <p className="text-muted-foreground mb-4">
                     No tienes cuentas guardadas
                   </p>
-                  <Button variant="outline" onClick={() => window.location.href = "/accounts"}>
+                  <Button variant="outline" onClick={() => navigate("/accounts")}>
                     Agregar Cuenta
                   </Button>
                 </div>
