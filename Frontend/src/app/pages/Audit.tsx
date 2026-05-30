@@ -24,9 +24,42 @@ export function Audit() {
   const [auditLog, setAuditLog] = useState<AuditEvent[]>([]);
 
   useEffect(() => {
-    const log = JSON.parse(localStorage.getItem("nexus_audit") || "[]");
-    setAuditLog(log);
-  }, []);
+  const cargarAuditorias = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch("http://localhost:3000/api/auditorias", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      const eventos = data.map((e: any) => ({
+        id: e._id,
+        type: e.accion === "LOGIN" ? "login_success" : "transfer",
+        description:
+          e.accion === "LOGIN"
+            ? `Inicio de sesión ${e.estado}`
+            : `Transferencia ${e.estado}`,
+        timestamp: e.fecha,
+        status:
+          e.estado === "exitoso"
+            ? "success"
+            : e.estado === "fallido"
+            ? "error"
+            : "pending"
+      }));
+
+      setAuditLog(eventos);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  cargarAuditorias();
+}, []);
 
   const getEventIcon = (type: string) => {
     switch (type) {

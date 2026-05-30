@@ -32,21 +32,43 @@ export function Transactions() {
   const [filterType, setFilterType] = useState<"all" | "incoming" | "outgoing">("all");
 
   useEffect(() => {
-    const allTransactions = JSON.parse(localStorage.getItem("nexus_transactions") || "[]");
-    const userTransactions = allTransactions
-      .filter(
-        (t: any) =>
-          t.fromAccount === user?.accountNumber || t.toAccount === user?.accountNumber
-      )
-      .map((t: any) => ({
-        ...t,
-        type: t.toAccount === user?.accountNumber ? "incoming" : "outgoing",
-      }))
-      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const cargarTransacciones = async () => {
+    try {
+      const token = localStorage.getItem("token");
 
-    setTransactions(userTransactions);
-    setFilteredTransactions(userTransactions);
-  }, [user]);
+      const response = await fetch("http://localhost:3000/api/transferencias", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      const transacciones = data.map((t: any) => ({
+        id: t._id,
+        type: t.cuentaDestino === user?.accountNumber ? "incoming" : "outgoing",
+        fromAccount: t.cuentaOrigen,
+        toAccount: t.cuentaDestino,
+        amount: t.monto,
+        concept: t.mensaje || "Transferencia",
+        timestamp: t.fecha,
+        status:
+          t.estado === "exitosa"
+            ? "completed"
+            : t.estado === "pendiente"
+            ? "pending"
+            : "failed"
+      }));
+
+      setTransactions(transacciones);
+      setFilteredTransactions(transacciones);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  cargarTransacciones();
+}, [user]);
 
   useEffect(() => {
     let filtered = transactions;

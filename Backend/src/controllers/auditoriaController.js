@@ -2,7 +2,9 @@ const Auditoria = require("../models/Auditoria");
 
 const obtenerAuditorias = async (req, res) => {
   try {
-    const auditorias = await Auditoria.find()
+    const auditorias = await Auditoria.find({
+      usuario: req.usuario.id
+    })
       .populate("usuario", "nombre email numeroCuenta")
       .sort({ fecha: -1 });
 

@@ -30,24 +30,60 @@ export function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [totalTransferencias, setTotalTransferencias] = useState(0);
 
   useEffect(() => {
-    const transactions = JSON.parse(localStorage.getItem("nexus_transactions") || "[]");
-    const userTransactions = transactions.filter(
-      (t: any) => t.fromAccount === user?.accountNumber || t.toAccount === user?.accountNumber
-    );
 
-    const recent = userTransactions.slice(0, 5).map((t: any) => ({
-      id: t.id,
-      type: t.toAccount === user?.accountNumber ? "incoming" : "outgoing",
-      amount: t.amount,
-      description: t.concept || "Transferencia",
-      date: t.timestamp,
-      status: t.status,
-    }));
+  const cargarDashboard = async () => {
 
-    setRecentTransactions(recent);
-  }, [user]);
+    try {
+
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        "http://localhost:3000/api/dashboard",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      setTotalTransferencias(
+        data.totalTransferencias
+      );
+
+      const movimientos = (data.movimientosRecientes || []).map(
+        (t: any) => ({
+          id: t._id,
+          type:
+            t.cuentaDestino === user?.accountNumber
+              ? "incoming"
+              : "outgoing",
+          amount: t.monto,
+          description: t.mensaje || "Transferencia",
+          date: t.fecha,
+          status: "completed" as "completed"
+        })
+      );
+
+      setRecentTransactions(
+        movimientos
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+  };
+
+  cargarDashboard();
+
+}, [user]);
 
   const quickActions = [
     {
@@ -181,7 +217,7 @@ export function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Transacciones</p>
-                <p className="text-2xl font-semibold text-foreground">{recentTransactions.length}</p>
+                <p className="text-2xl font-semibold text-foreground">{totalTransferencias}</p>
               </div>
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-primary" />
@@ -205,7 +241,7 @@ export function Dashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          {recentTransactions.length === 0 ? (
+          {totalTransferencias === 0 ? (
             <div className="text-center py-12">
               <History className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
               <p className="text-muted-foreground">No tienes transacciones recientes</p>

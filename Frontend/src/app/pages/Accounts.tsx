@@ -24,12 +24,33 @@ export function Accounts() {
     bankName: "",
   });
 
-  useEffect(() => {
-    const savedAccounts = JSON.parse(localStorage.getItem("nexus_saved_accounts") || "[]");
-    setAccounts(savedAccounts);
-  }, []);
+ useEffect(() => {
+  const cargarCuentas = async () => {
+    const token = localStorage.getItem("token");
 
-  const handleSubmit = (e: React.FormEvent) => {
+    const response = await fetch("http://localhost:3000/api/cuentas-destino", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await response.json();
+
+    const cuentasFormateadas = data.map((cuenta: any) => ({
+      id: cuenta._id,
+      alias: cuenta.alias,
+      accountNumber: cuenta.numeroCuenta,
+      bankName: cuenta.banco,
+      createdAt: cuenta.fechaRegistro
+    }));
+
+    setAccounts(cuentasFormateadas);
+  };
+
+  cargarCuentas();
+}, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (formData.accountNumber.length !== 10) {
@@ -37,38 +58,69 @@ export function Accounts() {
       return;
     }
 
-    const newAccounts = [...accounts];
+    try {
+      const token = localStorage.getItem("token");
 
-    if (editingId) {
-      const index = accounts.findIndex((a) => a.id === editingId);
-      newAccounts[index] = {
-        ...newAccounts[index],
-        ...formData,
+      const response = await fetch("http://localhost:3000/api/cuentas-destino", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          alias: formData.alias,
+          numeroCuenta: formData.accountNumber,
+          banco: formData.bankName || "Banco Nexus Cloud"
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.mensaje || "Error al agregar cuenta");
+        return;
+      }
+
+      const nuevaCuenta = {
+        id: data.cuenta._id,
+        alias: data.cuenta.alias,
+        accountNumber: data.cuenta.numeroCuenta,
+        bankName: data.cuenta.banco,
+        createdAt: data.cuenta.fechaRegistro
       };
-      toast.success("Cuenta actualizada exitosamente");
-    } else {
-      const newAccount: SavedAccount = {
-        id: Date.now().toString(),
-        ...formData,
-        createdAt: new Date().toISOString(),
-      };
-      newAccounts.push(newAccount);
+
+      setAccounts([nuevaCuenta, ...accounts]);
+
       toast.success("Cuenta agregada exitosamente");
+      setShowModal(false);
+      setEditingId(null);
+      setFormData({ alias: "", accountNumber: "", bankName: "" });
+
+    } catch (error) {
+      console.error(error);
+      toast.error("Error de conexión");
     }
-
-    localStorage.setItem("nexus_saved_accounts", JSON.stringify(newAccounts));
-    setAccounts(newAccounts);
-    setShowModal(false);
-    setEditingId(null);
-    setFormData({ alias: "", accountNumber: "", bankName: "" });
   };
 
-  const handleDelete = (id: string) => {
-    const newAccounts = accounts.filter((a) => a.id !== id);
-    localStorage.setItem("nexus_saved_accounts", JSON.stringify(newAccounts));
-    setAccounts(newAccounts);
+  const handleDelete = async (id: string) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    await fetch(`http://localhost:3000/api/cuentas-destino/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    setAccounts(accounts.filter((a) => a.id !== id));
     toast.success("Cuenta eliminada");
-  };
+
+  } catch (error) {
+    console.error(error);
+    toast.error("Error al eliminar cuenta");
+  }
+};
 
   const handleEdit = (account: SavedAccount) => {
     setEditingId(account.id);
