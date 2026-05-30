@@ -6,10 +6,14 @@ const cors = require("cors");
 
 const app = express();
 const authRoutes = require("./src/routes/authRoutes");
+const transferenciaRoutes = require("./src/routes/transferenciaRoutes");
+const auditoriaRoutes = require("./src/routes/auditoriaRoutes");
 
 app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
+app.use("/api/transferencias", transferenciaRoutes);
+app.use("/api/auditorias", auditoriaRoutes);
 
 mongoose.connect(process.env.MONGO_URI)
 .then(() => {
