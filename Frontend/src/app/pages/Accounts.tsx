@@ -6,6 +6,7 @@ import { Badge } from "../components/ui/Badge";
 import { Wallet, Plus, Trash2, Edit2, X } from "lucide-react";
 import { toast } from "sonner";
 
+//importante
 interface SavedAccount {
   id: string;
   alias: string;
