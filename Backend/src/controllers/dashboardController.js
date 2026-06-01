@@ -5,37 +5,36 @@ const obtenerDashboard = async (req, res) => {
   try {
     const usuario = await Usuario.findById(req.usuario.id).select("-password");
 
-    const totalTransferencias = await Transferencia.countDocuments({
+    const transferencias = await Transferencia.find({
       $or: [
         { cuentaOrigen: usuario.numeroCuenta },
         { cuentaDestino: usuario.numeroCuenta }
       ]
-    });
+    }).sort({ fecha: -1 });
 
-    const transferenciasExitosas = await Transferencia.countDocuments({
-      $or: [
-        { cuentaOrigen: usuario.numeroCuenta },
-        { cuentaDestino: usuario.numeroCuenta }
-      ],
-      estado: "exitosa"
-    });
+    const transferenciasExitosas = transferencias.filter(
+      t => t.estado === "exitosa"
+    );
 
-    const movimientosRecientes = await Transferencia.find({
-      $or: [
-        { cuentaOrigen: usuario.numeroCuenta },
-        { cuentaDestino: usuario.numeroCuenta }
-      ]
-    })
-      .sort({ fecha: -1 })
-      .limit(5);
+    const totalIngresos = transferenciasExitosas
+      .filter(t => t.cuentaDestino === usuario.numeroCuenta)
+      .reduce((total, t) => total + t.monto, 0);
+
+    const totalGastos = transferenciasExitosas
+      .filter(t => t.cuentaOrigen === usuario.numeroCuenta)
+      .reduce((total, t) => total + t.monto, 0);
+
+    const movimientosRecientes = transferencias.slice(0, 5);
 
     res.json({
       nombre: usuario.nombre,
       email: usuario.email,
       numeroCuenta: usuario.numeroCuenta,
       saldo: usuario.saldo,
-      totalTransferencias,
-      transferenciasExitosas,
+      totalTransferencias: transferencias.length,
+      transferenciasExitosas: transferenciasExitosas.length,
+      totalIngresos,
+      totalGastos,
       movimientosRecientes
     });
 
