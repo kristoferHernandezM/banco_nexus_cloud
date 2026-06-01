@@ -5,8 +5,8 @@ const obtenerAuditorias = async (req, res) => {
     const auditorias = await Auditoria.find({
       usuario: req.usuario.id
     })
-      .populate("usuario", "nombre email numeroCuenta")
-      .sort({ fecha: -1 });
+      .sort({ fecha: -1 })
+      .limit(100);
 
     res.json(auditorias);
   } catch (error) {

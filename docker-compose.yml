@@ -1,0 +1,26 @@
+services:
+  backend:
+    build:
+      context: ./Backend
+    image: banco-nexus-backend:latest
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./Backend/.env
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  frontend:
+    build:
+      context: ./Frontend
+    image: banco-nexus-frontend:latest
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
