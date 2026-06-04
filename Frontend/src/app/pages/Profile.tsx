@@ -25,7 +25,7 @@ export function Profile() {
       try {
         const token = localStorage.getItem("token");
 
-        const response = await fetch("http://localhost:3000/api/auth/perfil", {
+        const response = await fetch("http://54.160.149.232:3000/api/auth/perfil", {
           headers: {
             Authorization: `Bearer ${token}`,
           },

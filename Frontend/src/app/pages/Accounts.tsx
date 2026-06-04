@@ -29,7 +29,7 @@ export function Accounts() {
   const cargarCuentas = async () => {
     const token = localStorage.getItem("token");
 
-    const response = await fetch("http://localhost:3000/api/cuentas-destino", {
+    const response = await fetch("http://54.160.149.232:3000/api/cuentas-destino", {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -62,7 +62,7 @@ export function Accounts() {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await fetch("http://localhost:3000/api/cuentas-destino", {
+      const response = await fetch("http://54.160.149.232:3000/api/cuentas-destino", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -107,7 +107,7 @@ export function Accounts() {
   try {
     const token = localStorage.getItem("token");
 
-    await fetch(`http://localhost:3000/api/cuentas-destino/${id}`, {
+    await fetch(`http://54.160.149.232:3000/api/cuentas-destino/${id}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`

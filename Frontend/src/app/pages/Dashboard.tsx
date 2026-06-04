@@ -45,8 +45,7 @@
 
         const token = localStorage.getItem("token");
 
-        const response = await fetch(
-          "http://localhost:3000/api/dashboard",
+        const response = await fetch("http://54.160.149.232:3000/api/dashboard",
           {
             headers: {
               Authorization: `Bearer ${token}`

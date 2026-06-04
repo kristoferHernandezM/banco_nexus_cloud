@@ -28,7 +28,7 @@ export function Audit() {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await fetch("http://localhost:3000/api/auditorias", {
+      const response = await fetch("http://54.160.149.232:3000/api/auditorias", {
         headers: {
           Authorization: `Bearer ${token}`
         }

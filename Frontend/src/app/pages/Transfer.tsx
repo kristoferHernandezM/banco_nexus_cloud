@@ -34,7 +34,7 @@ export function Transfer() {
       const token = localStorage.getItem("token");
 
       const response = await fetch(
-        "http://localhost:3000/api/cuentas-destino",
+        "http://54.160.149.232:3000/api/cuentas-destino",
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -103,7 +103,7 @@ export function Transfer() {
   try {
     const token = localStorage.getItem("token");
 
-    const response = await fetch("http://localhost:3000/api/transferencias", {
+    const response = await fetch("http://54.160.149.232:3000/api/transferencias", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

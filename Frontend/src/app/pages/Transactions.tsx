@@ -36,7 +36,7 @@ export function Transactions() {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await fetch("http://localhost:3000/api/transferencias", {
+      const response = await fetch("http://54.160.149.232:3000/api/transferencias", {
         headers: {
           Authorization: `Bearer ${token}`
         }

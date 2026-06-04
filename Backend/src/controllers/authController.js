@@ -6,7 +6,6 @@ const registrarAuditoria = require("../utils/registrarAuditoria");
 
 const registrar = async (req, res) => {
   try {
-
     const { nombre, email, password } = req.body;
 
     const existe = await Usuario.findOne({ email });
@@ -19,30 +18,28 @@ const registrar = async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // Calculamos el número de cuenta ANTES de instanciar el modelo
+    const numeroCuenta = await generarNumeroCuentaUnico();
+
     const usuario = new Usuario({
       nombre,
       email,
-      password: passwordHash
+      password: passwordHash,
+      numeroCuenta // Se asigna directamente aquí
     });
 
-    await usuario.save();
-
-    const totalUsuarios = await Usuario.countDocuments();
-    const numeroCuenta = generarCuenta(totalUsuarios + 1);
-
-    usuario.numeroCuenta = numeroCuenta;
-
+    // Un solo guardado en la base de datos
     await usuario.save();
 
     await registrarAuditoria({
-        usuario: usuario._id,
-        accion: "REGISTRO",
-        estado: "exitoso",
-        detalle: {
-            email: usuario.email,
-            cuenta: usuario.numeroCuenta
-        }
-        });
+      usuario: usuario._id,
+      accion: "REGISTRO",
+      estado: "exitoso",
+      detalle: {
+        email: usuario.email,
+        cuenta: usuario.numeroCuenta
+      }
+    });
 
     res.status(201).json({
       mensaje: "Usuario registrado correctamente",
@@ -50,34 +47,28 @@ const registrar = async (req, res) => {
     });
 
   } catch (error) {
-
     res.status(500).json({
       mensaje: error.message
     });
-
   }
 };
 
 const login = async (req, res) => {
   try {
-
     const { email, password } = req.body;
 
     const usuario = await Usuario.findOne({ email });
 
     if (!usuario) {
-        
-        await registrarAuditoria({
-            accion: "LOGIN",
-            estado: "fallido",
-            detalle: {
-                email
-            }
-        });
+      await registrarAuditoria({
+        accion: "LOGIN",
+        estado: "fallido",
+        detalle: { email }
+      });
 
-        return res.status(400).json({
+      return res.status(400).json({
         mensaje: "Usuario no encontrado"
-        });
+      });
     }
 
     const passwordValida = await bcrypt.compare(
@@ -86,17 +77,17 @@ const login = async (req, res) => {
     );
 
     if (!passwordValida) {
-        await registrarAuditoria({
-            usuario: usuario._id,
-            accion: "LOGIN",
-            estado: "fallido",
-            detalle: {
-                motivo: "Contraseña incorrecta"
-            }
-        });
-        return res.status(400).json({
-            mensaje: "Contraseña incorrecta"
-        });
+      await registrarAuditoria({
+        usuario: usuario._id,
+        accion: "LOGIN",
+        estado: "fallido",
+        detalle: {
+          motivo: "Contraseña incorrecta"
+        }
+      });
+      return res.status(400).json({
+        mensaje: "Contraseña incorrecta"
+      });
     }
 
     const token = jwt.sign(
@@ -111,12 +102,10 @@ const login = async (req, res) => {
     );
 
     await registrarAuditoria({
-    usuario: usuario._id,
-    accion: "LOGIN",
-    estado: "exitoso",
-    detalle: {
-        email: usuario.email
-    }
+      usuario: usuario._id,
+      accion: "LOGIN",
+      estado: "exitoso",
+      detalle: { email: usuario.email }
     });
 
     res.json({
@@ -131,50 +120,43 @@ const login = async (req, res) => {
     });
 
   } catch (error) {
-
     res.status(500).json({
       mensaje: error.message
     });
-
   }
 };
 
 const perfil = async (req, res) => {
-
   try {
+    const usuario = await Usuario.findById(req.usuario.id).select("-password");
 
-    const usuario = await Usuario.findById(
-      req.usuario.id
-    ).select("-password");
+    // Validación crucial: verificar que el usuario realmente exista
+    if (!usuario) {
+      return res.status(404).json({
+        mensaje: "Usuario no encontrado"
+      });
+    }
 
     await registrarAuditoria({
-        usuario: usuario._id,
-        accion: "CONSULTA_PERFIL",
-        estado: "exitoso"
-        });
+      usuario: usuario._id,
+      accion: "CONSULTA_PERFIL",
+      estado: "exitoso"
+    });
+    
     res.json(usuario);
 
   } catch (error) {
-
     res.status(500).json({
       mensaje: error.message
     });
-
   }
-
 };
 
 const cambiarPassword = async (req, res) => {
   try {
+    const { passwordActual, passwordNueva } = req.body;
 
-    const {
-      passwordActual,
-      passwordNueva
-    } = req.body;
-
-    const usuario = await Usuario.findById(
-      req.usuario.id
-    );
+    const usuario = await Usuario.findById(req.usuario.id);
 
     if (!usuario) {
       return res.status(404).json({
@@ -188,7 +170,6 @@ const cambiarPassword = async (req, res) => {
     );
 
     if (!coincide) {
-
       await registrarAuditoria({
         usuario: usuario._id,
         accion: "CAMBIO_PASSWORD",
@@ -203,11 +184,7 @@ const cambiarPassword = async (req, res) => {
       });
     }
 
-    usuario.password = await bcrypt.hash(
-      passwordNueva,
-      10
-    );
-
+    usuario.password = await bcrypt.hash(passwordNueva, 10);
     await usuario.save();
 
     await registrarAuditoria({
@@ -221,14 +198,11 @@ const cambiarPassword = async (req, res) => {
     });
 
   } catch (error) {
-
     await registrarAuditoria({
       usuario: req.usuario?.id || null,
       accion: "CAMBIO_PASSWORD",
       estado: "fallido",
-      detalle: {
-        motivo: error.message
-      }
+      detalle: { motivo: error.message }
     });
 
     res.status(500).json({
@@ -239,7 +213,6 @@ const cambiarPassword = async (req, res) => {
 
 const actualizarPerfil = async (req, res) => {
   try {
-
     const { nombre, email } = req.body;
 
     const usuario = await Usuario.findById(req.usuario.id);
@@ -251,10 +224,7 @@ const actualizarPerfil = async (req, res) => {
     }
 
     if (email && email !== usuario.email) {
-
-      const existe = await Usuario.findOne({
-        email
-      });
+      const existe = await Usuario.findOne({ email });
 
       if (existe) {
         return res.status(400).json({
@@ -284,14 +254,11 @@ const actualizarPerfil = async (req, res) => {
     });
 
   } catch (error) {
-
     await registrarAuditoria({
       usuario: req.usuario?.id || null,
       accion: "ACTUALIZAR_PERFIL",
       estado: "fallido",
-      detalle: {
-        motivo: error.message
-      }
+      detalle: { motivo: error.message }
     });
 
     res.status(500).json({
@@ -300,11 +267,49 @@ const actualizarPerfil = async (req, res) => {
   }
 };
 
+async function generarNumeroCuentaUnico() {
+  let totalUsuarios = await Usuario.countDocuments();
+  let numeroCuenta;
+  let existe = true;
+
+  while (existe) {
+    totalUsuarios++;
+
+    numeroCuenta = generarCuenta(totalUsuarios);
+
+    existe = await Usuario.findOne({
+      numeroCuenta
+    });
+  }
+
+  return numeroCuenta;
+}
+
+const diagnostico = async (req, res) => {
+  try {
+    const usuarios = await Usuario.find({});
+    const indices = await Usuario.collection.getIndexes();
+
+    res.json({
+      totalUsuarios: usuarios.length,
+      usuarios: usuarios.map(u => ({
+        email: u.email,
+        nombre: u.nombre,
+        numeroCuenta: u.numeroCuenta,
+        _id: u._id
+      })),
+      indices
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 module.exports = {
   registrar,
   login,
   perfil,
   cambiarPassword,
-  actualizarPerfil
+  actualizarPerfil,
+  diagnostico
 };
